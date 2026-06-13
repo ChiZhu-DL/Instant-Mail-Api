@@ -459,8 +459,8 @@ if (!empty($_COOKIE['csrf_token'])) {
                             <span class="info-value">Asia/Shanghai</span>
                         </div>
                         <div class="info-item">
-                            <span class="info-label">当前时间：</span>
-                            <span class="info-value" id="system-time">-</span>
+                            <span class="info-label">开源链接</span>
+                            <span class="info-value">https://github.com/ChiZhu-DL/Instant-Mail-Api</span>
                         </div>
                     </div>
                 </div>
