@@ -1,0 +1,71 @@
+# Instant Mail API 管理系统 - Apache 配置
+
+# 开启 URL 重写
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteBase /temp-mail-api/
+
+    # 禁止直接访问 cache/ 目录（.htaccess 中不允许 <Directory>，改用重写规则）
+    RewriteRule ^cache/ - [F,L]
+    RewriteRule ^cache$ - [F,L]
+</IfModule>
+
+# 禁止目录列表
+Options -Indexes
+
+# 禁止访问敏感文件（注意：api.php 动态输出 JSON，不受此影响，因为这里匹配的是磁盘文件扩展名）
+<FilesMatch "\.(log|txt|md|json|ini|yml|yaml)$">
+    Require all denied
+</FilesMatch>
+
+# 禁止访问测试和调试脚本
+<FilesMatch "^(debug|test)_">
+    Require all denied
+</FilesMatch>
+
+# 保护配置文件
+<Files "config.php">
+    Require all denied
+</Files>
+<Files "InstantMailAPI.php">
+    Require all denied
+</Files>
+
+# 设置错误处理
+ErrorDocument 404 /temp-mail-api/index.php
+
+# 启用 Gzip 压缩
+<IfModule mod_deflate.c>
+    AddOutputFilterByType DEFLATE text/plain
+    AddOutputFilterByType DEFLATE text/html
+    AddOutputFilterByType DEFLATE text/xml
+    AddOutputFilterByType DEFLATE text/css
+    AddOutputFilterByType DEFLATE application/xml
+    AddOutputFilterByType DEFLATE application/xhtml+xml
+    AddOutputFilterByType DEFLATE application/rss+xml
+    AddOutputFilterByType DEFLATE application/javascript
+    AddOutputFilterByType DEFLATE application/x-javascript
+    AddOutputFilterByType DEFLATE application/json
+</IfModule>
+
+# 设置缓存
+<IfModule mod_expires.c>
+    ExpiresActive On
+    ExpiresByType text/css "access plus 1 week"
+    ExpiresByType application/javascript "access plus 1 week"
+    ExpiresByType image/jpg "access plus 1 month"
+    ExpiresByType image/jpeg "access plus 1 month"
+    ExpiresByType image/gif "access plus 1 month"
+    ExpiresByType image/png "access plus 1 month"
+    ExpiresByType image/svg+xml "access plus 1 month"
+    ExpiresByType font/woff "access plus 1 month"
+    ExpiresByType font/woff2 "access plus 1 month"
+</IfModule>
+
+# 安全头设置
+<IfModule mod_headers.c>
+    Header set X-Content-Type-Options "nosniff"
+    Header set X-Frame-Options "SAMEORIGIN"
+    Header set X-XSS-Protection "1; mode=block"
+    Header set Referrer-Policy "strict-origin-when-cross-origin"
+</IfModule>
