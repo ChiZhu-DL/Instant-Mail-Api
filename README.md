@@ -304,7 +304,7 @@ A: 推荐使用现代浏览器，包括 Chrome、Firefox、Edge、Safari 等
 ## 技术支持
 
 如有问题或建议，欢迎反馈。
-
+# [github]（https://github.com/ChiZhu-DL/Instant-Mail-Api）
 ## 版本信息
 
 - **版本**：2.0.0
