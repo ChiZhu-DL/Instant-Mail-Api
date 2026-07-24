@@ -92,12 +92,12 @@ python instant_mail_api.py message MESSAGE_ID --email test@bltiwd.com --token TO
 # 3. Nginx 用户需配置伪静态规则（见 deploy/nginx.conf.example）
 # 4. Apache 用户需开启 AllowOverride All
 # 5. 虚拟主机无需任何配置，上传即用
-[下载web releases](https://github.com/ChiZhu-DL/Instant-Mail-Api/releases/tag/InstantMail)
+
 # 本地开发
 cd web
 php -S 127.0.0.1:8080
 ```
-
+[下载web releases](https://github.com/ChiZhu-DL/Instant-Mail-Api/releases/tag/InstantMail)
 ### 环境要求
 
 | 项 | 要求 |
