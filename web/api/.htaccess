@@ -1,0 +1,19 @@
+# Apache: 只允许走 index.php 入口，禁止下载源码库
+<Files "InstantMail.php">
+  <IfModule mod_authz_core.c>
+    Require all denied
+  </IfModule>
+  <IfModule !mod_authz_core.c>
+    Order allow,deny
+    Deny from all
+  </IfModule>
+</Files>
+
+DirectoryIndex index.php
+
+# 保证 POST JSON 能传到 PHP
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteCond %{REQUEST_FILENAME} !-f
+  RewriteRule ^ index.php [L,QSA]
+</IfModule>

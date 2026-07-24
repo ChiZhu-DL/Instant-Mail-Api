@@ -1,0 +1,59 @@
+# ============================================================
+# BeatMail — Apache 虚拟主机示例
+# 用法:
+#   1. 上传 web/ 内容到 DocumentRoot
+#   2. 启用: a2enmod rewrite headers expires deflate
+#   3. 复制本文件到 sites-available，a2ensite 后 reload
+#
+# 共享主机 / cPanel / 宝塔 Apache:
+#   通常只需把「运行目录 / 网站根目录」设为 web/ 内容目录，
+#   根目录下的 .htaccess 会自动生效（需 AllowOverride All）。
+# ============================================================
+
+<VirtualHost *:80>
+    ServerName mail.example.com
+    ServerAlias www.mail.example.com
+    ServerAdmin admin@example.com
+
+    # 网站根目录 = 本项目的 web/ 目录
+    DocumentRoot /var/www/beatmail
+
+    <Directory /var/www/beatmail>
+        Options -Indexes +FollowSymLinks
+        AllowOverride All
+        Require all granted
+    </Directory>
+
+    # 禁止直接访问核心库
+    <Files "InstantMail.php">
+        Require all denied
+    </Files>
+
+    # 禁止 tools 自测
+    <Directory /var/www/beatmail/tools>
+        Require all denied
+    </Directory>
+
+    # 日志
+    ErrorLog ${APACHE_LOG_DIR}/beatmail-error.log
+    CustomLog ${APACHE_LOG_DIR}/beatmail-access.log combined
+
+    # 可选：强制 UTF-8
+    AddDefaultCharset UTF-8
+</VirtualHost>
+
+# ----- HTTPS（配合 certbot / 面板证书）-----
+# <VirtualHost *:443>
+#     ServerName mail.example.com
+#     DocumentRoot /var/www/beatmail
+#
+#     SSLEngine on
+#     SSLCertificateFile      /path/to/fullchain.pem
+#     SSLCertificateKeyFile   /path/to/privkey.pem
+#
+#     <Directory /var/www/beatmail>
+#         Options -Indexes +FollowSymLinks
+#         AllowOverride All
+#         Require all granted
+#     </Directory>
+# </VirtualHost>

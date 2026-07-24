@@ -1,0 +1,89 @@
+# ============================================================
+# BeatMail — Apache (虚拟主机 / 共享主机 通用)
+# 将网站根目录指向本文件所在目录 (web/)
+# 需要: AllowOverride All  +  mod_rewrite / mod_headers (可选)
+# ============================================================
+
+# 默认首页
+DirectoryIndex index.php index.html
+
+# 关闭目录列表
+Options -Indexes
+
+# 禁止把 .ht* 当网页读
+<FilesMatch "^\.ht">
+  <IfModule mod_authz_core.c>
+    Require all denied
+  </IfModule>
+  <IfModule !mod_authz_core.c>
+    Order allow,deny
+    Deny from all
+  </IfModule>
+</FilesMatch>
+
+# 禁止直接访问核心库与自测脚本
+<Files "InstantMail.php">
+  <IfModule mod_authz_core.c>
+    Require all denied
+  </IfModule>
+  <IfModule !mod_authz_core.c>
+    Order allow,deny
+    Deny from all
+  </IfModule>
+</Files>
+
+# 安全响应头（主机支持时生效）
+<IfModule mod_headers.c>
+  Header set X-Content-Type-Options "nosniff"
+  Header set X-Frame-Options "SAMEORIGIN"
+  Header set Referrer-Policy "no-referrer"
+  Header set X-XSS-Protection "1; mode=block"
+</IfModule>
+
+# 压缩（可选）
+<IfModule mod_deflate.c>
+  AddOutputFilterByType DEFLATE text/html text/css application/javascript application/json text/javascript
+</IfModule>
+
+# 静态资源缓存（可选）
+<IfModule mod_expires.c>
+  ExpiresActive On
+  ExpiresByType text/css "access plus 7 days"
+  ExpiresByType application/javascript "access plus 7 days"
+  ExpiresByType image/png "access plus 30 days"
+  ExpiresByType image/svg+xml "access plus 30 days"
+</IfModule>
+
+# 强制 UTF-8
+AddDefaultCharset UTF-8
+<IfModule mod_mime.c>
+  AddCharset UTF-8 .html .css .js .json .php
+</IfModule>
+
+# URL 重写：真实文件直接访问，其余回首页（单页友好）
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+
+  # 若部署在子目录，取消下一行注释并改成你的子路径，例如 /mail/
+  # RewriteBase /mail/
+
+  # 已存在文件/目录不重写
+  RewriteCond %{REQUEST_FILENAME} -f [OR]
+  RewriteCond %{REQUEST_FILENAME} -d
+  RewriteRule ^ - [L]
+
+  # API 目录：无 index 时落到 api/index.php
+  RewriteRule ^api(?:/.*)?$ api/index.php [L,QSA]
+
+  # 其它路径落到前台
+  RewriteRule ^ index.php [L,QSA]
+</IfModule>
+
+# PHP 建议设置（共享主机可能被面板覆盖）
+<IfModule mod_php.c>
+  php_value upload_max_filesize 8M
+  php_value post_max_size 8M
+  php_value max_execution_time 60
+  php_value default_charset "UTF-8"
+</IfModule>
+# php-fpm / CGI 主机用 .user.ini（见同目录 .user.ini）
