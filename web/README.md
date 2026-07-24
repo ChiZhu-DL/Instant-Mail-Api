@@ -1,9 +1,11 @@
+```markdown
 # BeatMail - 开源临时邮箱系统
 
-基于 Instant Mail API 的 PHP 全栈临时邮箱站点。  
+基于 Instant Mail API 的 PHP 全栈临时邮箱站点。
 视觉风格采用 **BeatCraft** 游戏化设计：像素风粗线条、鲜明色彩（天蓝/亮黄/珊瑚粉/草绿）、圆角字体、居中画布。
 
-# > ⚠️ 项目属性声明
+## ⚠️ 项目属性声明
+
 > 本项目的核心代码结构、功能逻辑、文档内容均由AI辅助生成，经人工校验、调整后开源发布。
 > 生成过程中使用了大语言模型辅助完成代码编写、框架搭建与文档输出工作。
 
@@ -18,19 +20,19 @@
 
 ## 📁 目录结构
 
-`	ext
+```
 beatmail/
-├── web/                      # 网站核心文件 (上传至服务器的根目录)
-│   ├── index.php             # 前端主页面
-│   ├── assets/               # 静态资源 (CSS/JS)
-│   └── api/                  # 后端接口
-│       ├── index.php         # API 路由
-│       └── InstantMail.php   # 核心通信组件
-└── deploy/                   # 部署参考配置
-    ├── DEPLOY.md             # 部署说明
-    ├── nginx.conf.example    # Nginx 伪静态参考
+├── web/                     # 网站核心文件（上传至服务器的根目录）
+│   ├── index.php            # 前端主页面
+│   ├── assets/              # 静态资源 (CSS/JS)
+│   └── api/                 # 后端接口
+│       ├── index.php        # API 路由
+│       └── InstantMail.php  # 核心通信组件
+└── deploy/                  # 部署参考配置
+    ├── DEPLOY.md            # 部署说明
+    ├── nginx.conf.example   # Nginx 伪静态参考
     └── apache-vhost.conf.example
-`
+```
 
 ## 🛠️ 环境要求
 
@@ -51,10 +53,11 @@ beatmail/
 
 你可以使用 PHP 内置服务器快速启动：
 
-`ash
+```bash
 cd web
 php -S 127.0.0.1:8080
-`
+```
+
 然后浏览器访问 http://127.0.0.1:8080 即可体验。
 
 ## 🔌 API 接口概览
@@ -70,4 +73,4 @@ php -S 127.0.0.1:8080
 ## ⚠️ 免责声明
 
 本项目仅供学习与技术交流。邮件收发依赖于公开的第三方上游服务接口（由应用逆向得出），如果上游服务更新导致接口失效，需自行更新 InstantMail.php 中的密钥与端点。**请勿将临时邮箱用于注册重要账号。**
-
+```
