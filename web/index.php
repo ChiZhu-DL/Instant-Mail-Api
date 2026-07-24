@@ -100,7 +100,7 @@
                   <div class="resource-title">开源入口</div>
                   <div class="resource-subtitle">仅供学习研究用途</div>
                 </div>
-                <a class="btn btn-ghost resource-link" href="https://github.com/your-org/beatmail" target="_blank" rel="noopener noreferrer">前往 GitHub</a>
+                <a class="btn btn-ghost resource-link" href="https://github.com/ChiZhu-DL/Instant-Mail-Api" target="_blank" rel="noopener noreferrer">前往 GitHub</a>
               </div>
             </div>
           </div>
