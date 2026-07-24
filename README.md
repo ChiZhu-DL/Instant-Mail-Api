@@ -2,10 +2,8 @@
 
 临时邮箱全套解决方案。包含两个部分：
 
-- **Instant Mail API** — 从 Instant Mail App（React Native）反编译还原的 Python API 客户端，支持 4 种邮箱服务
-- (instant_mail_api.py)
-- **BeatMail** — 基于该 API 构建的 PHP 全栈临时邮箱 Web 站点，游戏化 UI，无需数据库
-- [web](./web)。
+- **Instant Mail API** — 从 Instant Mail App（React Native）反编译还原的 Python API 客户端，支持 4 种邮箱服务 (instant_mail_api.py)
+- **BeatMail** — 基于该 API 构建的 PHP 全栈临时邮箱 Web 站点，游戏化 UI，无需数据库[web](./web)。
 
 ## 项目结构
 
