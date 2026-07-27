@@ -62,6 +62,27 @@ web/                          # 网站根目录（整个目录上传到服务器
    - `cache_writable` 为 `true`
    - `auth_enabled` 为 `true`
    - `curl_path_as_is` 为 `false` 属正常（老 curl 缺该常量，已做降级处理）
+## 面板设置伪静态
+```bash
+# 封死核心库/配置/缓存被直接访问
+location ~* ^/api/(InstantMail|config|cache|auth)\.php$ { deny all; return 404; }
+location ^~ /api/cache/ { deny all; return 404; }
+location ~* /\.(ht|git|env) { deny all; return 404; }
+location ~* ^/.*\.(zip|tar|gz|bak|sql|log|md)$ { deny all; return 404; }
+
+# 关目录列表 + 静态资源缓存
+autoindex off;
+location ~* ^/assets/.*\.(css|js|png|svg|woff2?)$ {
+    expires 7d;
+    add_header Cache-Control "public, max-age=604800";
+}
+
+# 安全响应头
+add_header X-Content-Type-Options "nosniff" always;
+add_header X-Frame-Options "SAMEORIGIN" always;
+add_header Referrer-Policy "same-origin" always;
+```
+
 
 ## 🔒 鉴权与限流
 
