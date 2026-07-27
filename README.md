@@ -85,9 +85,9 @@ python instant_mail_api.py message MESSAGE_ID --email test@bltiwd.com --token TO
 ### 快速部署
 
 详细部署指南见
-> [web/README.md](./web/README.md)
+> # 正常服务器/宝塔面板部署[web/README.md](./web/README.md)
 
-> [deploy/DEPLOY.md](./deploy/DEPLOY.md)
+> # 虚拟主机部署 [deploy/DEPLOY.md](./deploy/DEPLOY.md)
 
 ```bash
 # 1. 将 web/ 下所有文件上传到网站根目录
