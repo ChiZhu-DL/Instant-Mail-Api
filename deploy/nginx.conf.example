@@ -1,104 +1,17 @@
-# ============================================================
-# BeatMail — Nginx 虚拟主机示例
-# 用法:
-#   1. 把 web/ 目录内容上传到服务器，例如 /www/wwwroot/beatmail
-#   2. 复制本文件到 conf.d 或站点配置，改 server_name / root / PHP sock
-#   3. nginx -t && systemctl reload nginx
-#
-# 宝塔 / 1Panel / 其它面板: 把「网站目录」指到 web 内容目录，
-# 然后在「配置文件」里对照 location 段合并即可。
-# ============================================================
+# 封死核心库/配置/缓存被直接访问
+location ~* ^/api/(InstantMail|config|cache|auth)\.php$ { deny all; return 404; }
+location ^~ /api/cache/ { deny all; return 404; }
+location ~* /\.(ht|git|env) { deny all; return 404; }
+location ~* ^/.*\.(zip|tar|gz|bak|sql|log|md)$ { deny all; return 404; }
 
-# ----- HTTP（可按需强制跳 HTTPS）-----
-server {
-    listen 80;
-    listen [::]:80;
-    server_name mail.example.com;          # ← 改成你的域名
-
-    # 网站根目录 = 本项目的 web/ 目录
-    root /www/wwwroot/beatmail;            # ← 改成实际上传路径
-    index index.php index.html;
-
-    charset utf-8;
-    client_max_body_size 8m;
-
-    # 安全头
-    add_header X-Content-Type-Options nosniff always;
-    add_header X-Frame-Options SAMEORIGIN always;
-    add_header Referrer-Policy no-referrer always;
-
-    # 禁止访问隐藏文件、核心库、自测工具
-    location ~ /\. {
-        deny all;
-    }
-    location ~* /api/InstantMail\.php$ {
-        deny all;
-    }
-    location ^~ /tools/ {
-        deny all;
-    }
-
-    # 静态资源缓存
-    location ~* \.(css|js|png|jpg|jpeg|gif|ico|svg|woff2?)$ {
-        expires 7d;
-        access_log off;
-        try_files $uri =404;
-    }
-
-    # 前台：真实文件优先，否则 index.php
-    location / {
-        try_files $uri $uri/ /index.php?$query_string;
-    }
-
-    # API：保证 /api 与 /api/ 都进 index.php
-    location = /api {
-        return 301 /api/;
-    }
-    location /api/ {
-        try_files $uri /api/index.php?$query_string;
-    }
-
-    # PHP-FPM（按主机环境二选一）
-    location ~ \.php$ {
-        try_files $uri =404;
-
-        # --- 方式 A: Unix socket（宝塔/LNMP 常见）---
-        fastcgi_pass unix:/tmp/php-cgi-74.sock;
-        # 宝塔 PHP 80 示例: unix:/tmp/php-cgi-80.sock
-        # 或: unix:/www/server/php/80/var/run/php-fpm.sock
-
-        # --- 方式 B: TCP ---
-        # fastcgi_pass 127.0.0.1:9000;
-
-        fastcgi_index index.php;
-        fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
-        include fastcgi_params;
-
-        # 上游邮箱 API 可能稍慢，放宽超时
-        fastcgi_connect_timeout 60s;
-        fastcgi_send_timeout 60s;
-        fastcgi_read_timeout 60s;
-
-        # 传递 Authorization 等（一般用不到，保留无害）
-        fastcgi_param HTTP_PROXY "";
-    }
-
-    # 禁止执行上传目录里的 PHP（本项目无上传目录，预留）
-    # location ^~ /uploads/ { location ~ \.php$ { deny all; } }
+# 关目录列表 + 静态资源缓存
+autoindex off;
+location ~* ^/assets/.*\.(css|js|png|svg|woff2?)$ {
+    expires 7d;
+    add_header Cache-Control "public, max-age=604800";
 }
 
-# ----- HTTPS 示例（证书路径按实际修改）-----
-# server {
-#     listen 443 ssl http2;
-#     listen [::]:443 ssl http2;
-#     server_name mail.example.com;
-#     root /www/wwwroot/beatmail;
-#     index index.php index.html;
-#
-#     ssl_certificate     /path/to/fullchain.pem;
-#     ssl_certificate_key /path/to/privkey.pem;
-#     ssl_session_timeout 1d;
-#     ssl_protocols TLSv1.2 TLSv1.3;
-#
-#     # 下面 location 与上面 HTTP 段相同……
-# }
+# 安全响应头
+add_header X-Content-Type-Options "nosniff" always;
+add_header X-Frame-Options "SAMEORIGIN" always;
+add_header Referrer-Policy "same-origin" always;
