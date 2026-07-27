@@ -49,36 +49,23 @@
    如果是 Nginx 环境，面板默认是不支持 Apache 的 `.htaccess` 的，所以你需要在站点的【伪静态】设置里，填入以下规则以保障安全及路由正常：
 
 ```nginx
-# 禁止访问隐藏文件、核心库、自测工具
-location ~ /\. {
-    deny all;
-}
-location ~* /api/InstantMail\.php$ {
-    deny all;
-}
-location ^~ /tools/ {
-    deny all;
-}
+# 封死核心库/配置/缓存被直接访问
+location ~* ^/api/(InstantMail|config|cache|auth)\.php$ { deny all; return 404; }
+location ^~ /api/cache/ { deny all; return 404; }
+location ~* /\.(ht|git|env) { deny all; return 404; }
+location ~* ^/.*\.(zip|tar|gz|bak|sql|log|md)$ { deny all; return 404; }
 
-# 静态资源缓存
-location ~* \.(css|js|png|jpg|jpeg|gif|ico|svg|woff2?)$ {
+# 关目录列表 + 静态资源缓存
+autoindex off;
+location ~* ^/assets/.*\.(css|js|png|svg|woff2?)$ {
     expires 7d;
-    access_log off;
-    try_files $uri =404;
+    add_header Cache-Control "public, max-age=604800";
 }
 
-# 前台：真实文件优先，否则 index.php
-location / {
-    try_files $uri $uri/ /index.php?$query_string;
-}
-
-# API：保证 /api 与 /api/ 都进 index.php
-location = /api {
-    return 301 /api/;
-}
-location /api/ {
-    try_files $uri /api/index.php?$query_string;
-}
+# 安全响应头
+add_header X-Content-Type-Options "nosniff" always;
+add_header X-Frame-Options "SAMEORIGIN" always;
+add_header Referrer-Policy "same-origin" always;
 ```
 
 ---
