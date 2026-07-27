@@ -1,5 +1,7 @@
 # Instant Mail API 完整文档
 
+## 仓库 https://github.com/ChiZhu-DL/Instant-Mail-Api
+
 ## 概述
 
 从 Instant Mail (React Native/Hermes) 应用反编译还原的临时邮箱 API 接口。纯 Python 实现，无需安装第三方依赖。
