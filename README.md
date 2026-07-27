@@ -1,5 +1,5 @@
 # Instant Mail API & BeatMail
-
+## 仓库 https://github.com/ChiZhu-DL/Instant-Mail-Api
 临时邮箱全套解决方案。包含两个部分：
 
 - **Instant Mail API** — 从 Instant Mail App（React Native）反编译还原的 Python API 客户端，支持 4 种邮箱服务
