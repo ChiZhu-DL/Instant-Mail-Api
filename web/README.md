@@ -2,7 +2,8 @@
 
 基于 Instant Mail API 的 PHP 全栈临时邮箱站点。
 视觉风格采用 **BeatCraft** 游戏化设计：像素风粗线条、鲜明色彩（天蓝/亮黄/珊瑚粉/草绿）、圆角字体、居中画布。
-
+## 仓库 https://github.com/ChiZhu-DL/Instant-Mail-Api
+## 体验网址  https://hyrz.us.ci/mail
 ## ⚠️ 项目属性声明
 
 > 本项目的核心代码结构、功能逻辑、文档内容均由AI辅助生成，经人工校验、调整后开源发布。
