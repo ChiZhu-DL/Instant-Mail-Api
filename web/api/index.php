@@ -9,6 +9,9 @@
 
 declare(strict_types=1);
 
+// 标记「正规入口」。被 require 的文件靠它判断是否遭直接访问。
+define('BEATMAIL_APP', true);
+
 // 尽早开缓冲，吞掉 notice / 主机注入前缀
 if (function_exists('ob_start')) {
     while (ob_get_level() > 0) {
@@ -22,12 +25,36 @@ if (function_exists('ob_start')) {
 @ini_set('html_errors', '0');
 error_reporting(E_ALL);
 
+try {
+    require_once __DIR__ . '/config.php';
+    require_once __DIR__ . '/cache.php';
+    require_once __DIR__ . '/auth.php';
+} catch (Throwable $e) {
+    http_response_code(500);
+    header('Content-Type: application/json; charset=utf-8');
+    echo json_encode(['ok' => false, 'error' => '配置加载失败: ' . $e->getMessage()], JSON_UNESCAPED_UNICODE);
+    exit;
+}
+
 header('Content-Type: application/json; charset=utf-8');
 header('X-Content-Type-Options: nosniff');
-header('Access-Control-Allow-Origin: *');
-header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
-header('Access-Control-Allow-Headers: Content-Type');
 header('Cache-Control: no-store');
+header('Vary: Origin');
+
+/**
+ * 开启鉴权后不再对所有来源开放 CORS——否则任意站点的 JS
+ * 都能带着受害者的浏览器免密调用（同源判断只看 Origin）。
+ */
+$reqOrigin = $_SERVER['HTTP_ORIGIN'] ?? '';
+if (!API_AUTH_ENABLED) {
+    header('Access-Control-Allow-Origin: *');
+} elseif (is_string($reqOrigin) && $reqOrigin !== '' && is_same_origin_request()) {
+    header('Access-Control-Allow-Origin: ' . $reqOrigin);
+    header('Access-Control-Allow-Credentials: true');
+}
+header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
+header('Access-Control-Allow-Headers: Content-Type, Authorization');
+header('Access-Control-Max-Age: 600');
 
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     http_response_code(204);
@@ -50,8 +77,8 @@ function json_out(int $status, array $payload): void
         http_response_code($status);
         header('Content-Type: application/json; charset=utf-8');
         header('X-Content-Type-Options: nosniff');
-        header('Access-Control-Allow-Origin: *');
         header('Cache-Control: no-store');
+        // CORS 头已在文件顶部按鉴权策略设置好，这里不要再覆盖成 *
     }
 
     $flags = JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES;
@@ -160,6 +187,48 @@ function require_literal_email(string $key = 'email'): string
 
 $action = (string) (param('action') ?? '');
 
+// ── 鉴权闸门 ────────────────────────────────────────
+// health 保持公开，方便部署后直接探活。
+if ($action !== 'health') {
+    $auth = check_auth();
+    if (!$auth['ok']) {
+        header('WWW-Authenticate: Bearer realm="BeatMail API"');
+        json_out(401, [
+            'ok' => false,
+            'error' => $auth['reason'],
+            'hint' => '在请求头加 Authorization: Bearer <API_KEY>，密钥见 api/config.php',
+        ]);
+    }
+}
+
+// ── 限流 ────────────────────────────────────────────
+cache_gc();
+
+$isCreate = ($action === 'create');
+$rl = rate_limit_check(
+    $isCreate ? 'create' : 'general',
+    $isCreate ? RATE_LIMIT_CREATE_MAX : RATE_LIMIT_MAX,
+    RATE_LIMIT_WINDOW
+);
+
+if (!headers_sent()) {
+    header('X-RateLimit-Limit: ' . $rl['limit']);
+    header('X-RateLimit-Remaining: ' . $rl['remaining']);
+}
+
+if (!$rl['allowed']) {
+    if (!headers_sent()) {
+        header('Retry-After: ' . $rl['retry_after']);
+    }
+    json_out(429, [
+        'ok' => false,
+        'error' => '请求过于频繁，请稍后再试',
+        'retry_after' => $rl['retry_after'],
+        'limit' => $rl['limit'],
+        'window' => RATE_LIMIT_WINDOW,
+    ]);
+}
+
 try {
     switch ($action) {
         case 'health':
@@ -169,6 +238,10 @@ try {
                 'php' => PHP_VERSION,
                 'curl' => function_exists('curl_init'),
                 'openssl' => extension_loaded('openssl'),
+                'curl_path_as_is' => defined('CURLOPT_PATH_AS_IS'),
+                'auth_enabled' => API_AUTH_ENABLED,
+                'rate_limit' => RATE_LIMIT_ENABLED ? (RATE_LIMIT_MAX . '/' . RATE_LIMIT_WINDOW . 's') : 'off',
+                'cache_writable' => cache_dir() !== null,
                 'time' => time(),
                 'email_contract' => [
                     'business_layer' => 'literal @ only (user@domain.com)',

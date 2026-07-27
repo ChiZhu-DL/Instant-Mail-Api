@@ -62,14 +62,42 @@
 
         <article class="guide-card guide-callout">
           <div class="panel-title">AUTH</div>
-          <h3 class="guide-section-title">API 鉴权开关</h3>
-          <p>当前项目默认是公开 API，不强制鉴权。后续如果你要限制外部调用，可以在后端入口代码里加鉴权开关，并在开启后要求调用方传 <code>Authorization: Bearer YOUR_API_KEY</code>。</p>
-          <pre class="api-code"><code>// web/api/index.php 顶部可预留类似配置：
-define('API_AUTH_ENABLED', false); // DISABLED：当前公开 API，不需要鉴权
-// define('API_AUTH_ENABLED', true); // ENABLED：开启后要求 Authorization: Bearer YOUR_API_KEY
+          <h3 class="guide-section-title">API 鉴权</h3>
+          <p>鉴权<strong>默认已开启</strong>。本站页面自身的请求免密放行，<strong>外部脚本调用必须携带密钥</strong>：</p>
+          <pre class="api-code"><code>Authorization: Bearer YOUR_API_KEY</code></pre>
+          <p>密钥与开关都在 <code>web/api/config.php</code>：</p>
+          <pre class="api-code"><code>define('API_AUTH_ENABLED', true);   // 关掉则 API 完全公开
+define('API_KEY', '请替换成你的密钥');
+define('API_ALLOW_SAME_ORIGIN', true); // 本站页面免密</code></pre>
+          <p>无密钥或密钥错误时返回 <code>401</code>：</p>
+          <pre class="api-code"><code>{
+  "ok": false,
+  "error": "缺少凭证。外部调用需携带 Authorization: Bearer &lt;API_KEY&gt;"
+}</code></pre>
+          <p class="resource-note"><code>action=health</code> 始终公开，方便部署后探活。注意：创建邮箱返回的 <code>token</code> 是读取该邮箱邮件的业务 token，不等于 API 鉴权密钥。</p>
+        </article>
 
-define('API_KEY', '请替换成你的密钥');</code></pre>
-          <p class="resource-note">注意：创建邮箱返回的 <code>token</code> 是读取该邮箱邮件的业务 token，不等于 API 鉴权密钥。</p>
+        <article class="guide-card guide-callout warn">
+          <div class="panel-title">RATE LIMIT</div>
+          <h3 class="guide-section-title">调用频率限制</h3>
+          <p>按客户端 IP 固定窗口限流，默认配置：</p>
+          <ul class="api-endpoints guide-list">
+            <li>一般接口：<strong>60 次 / 分钟</strong></li>
+            <li><code>action=create</code>（创建邮箱代价高）：<strong>10 次 / 分钟</strong></li>
+          </ul>
+          <p>每个响应都会带上余量头，超限时返回 <code>429</code> 并附 <code>Retry-After</code>：</p>
+          <pre class="api-code"><code>X-RateLimit-Limit: 60
+X-RateLimit-Remaining: 42
+
+// 超限时
+HTTP/1.1 429
+Retry-After: 37
+{
+  "ok": false,
+  "error": "请求过于频繁，请稍后再试",
+  "retry_after": 37
+}</code></pre>
+          <p class="resource-note">阈值可在 <code>api/config.php</code> 的 <code>RATE_LIMIT_MAX</code> / <code>RATE_LIMIT_CREATE_MAX</code> 调整。</p>
         </article>
       </section>
 
@@ -136,23 +164,27 @@ define('API_KEY', '请替换成你的密钥');</code></pre>
       <section id="examples" class="guide-card">
         <div class="panel-title">EXAMPLES</div>
         <h3 class="guide-section-title">curl 调用示例</h3>
+        <p>把 <code>YOUR_API_KEY</code> 换成 <code>api/config.php</code> 里的密钥。</p>
         <div class="api-snippet">
-          <div class="api-snippet-title">健康检查</div>
+          <div class="api-snippet-title">健康检查（无需密钥）</div>
           <pre class="api-code"><code>curl -s "https://你的域名/api/index.php?action=health"</code></pre>
         </div>
         <div class="api-snippet">
           <div class="api-snippet-title">获取域名</div>
-          <pre class="api-code"><code>curl -s "https://你的域名/api/index.php?action=domains"</code></pre>
+          <pre class="api-code"><code>curl -s "https://你的域名/api/index.php?action=domains" \
+  -H "Authorization: Bearer YOUR_API_KEY"</code></pre>
         </div>
         <div class="api-snippet">
           <div class="api-snippet-title">创建邮箱</div>
           <pre class="api-code"><code>curl -s -X POST "https://你的域名/api/index.php?action=create" \
   -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_API_KEY" \
   -d '{"service":"temp-mail-io","domain":"bltiwd.com","name":"demo01"}'</code></pre>
         </div>
         <div class="api-snippet">
           <div class="api-snippet-title">读取收件箱</div>
-          <pre class="api-code"><code>curl -s "https://你的域名/api/index.php?action=messages&amp;email=demo01%40bltiwd.com&amp;token=TOKEN"</code></pre>
+          <pre class="api-code"><code>curl -s "https://你的域名/api/index.php?action=messages&amp;email=demo01%40bltiwd.com&amp;token=TOKEN" \
+  -H "Authorization: Bearer YOUR_API_KEY"</code></pre>
         </div>
       </section>
 
@@ -162,13 +194,12 @@ define('API_KEY', '请替换成你的密钥');</code></pre>
         <pre class="api-code"><code>import requests
 
 BASE = "https://你的域名/api/index.php"
+API_KEY = "YOUR_API_KEY"  # 见 api/config.php
 
-API_AUTH_ENABLED = False  # DISABLED：当前公开 API
-API_KEY = "YOUR_API_KEY"
-
-headers = {"Content-Type": "application/json"}
-if API_AUTH_ENABLED:
-    headers["Authorization"] = f"Bearer {API_KEY}"
+headers = {
+    "Content-Type": "application/json",
+    "Authorization": f"Bearer {API_KEY}",
+}
 
 created = requests.post(
     BASE,
@@ -208,16 +239,13 @@ print(inbox)</code></pre>
         <pre class="api-code"><code>&lt;?php
 
 $base = 'https://你的域名/api/index.php';
+$apiKey = 'YOUR_API_KEY'; // 见 api/config.php
 
-$apiAuthEnabled = false; // DISABLED：当前公开 API
-$apiKey = 'YOUR_API_KEY';
-
-function beatmail_headers($apiAuthEnabled, $apiKey) {
-    $headers = ['Content-Type: application/json'];
-    if ($apiAuthEnabled) {
-        $headers[] = 'Authorization: Bearer ' . $apiKey;
-    }
-    return $headers;
+function beatmail_headers($apiKey) {
+    return [
+        'Content-Type: application/json',
+        'Authorization: Bearer ' . $apiKey,
+    ];
 }
 
 function beatmail_post($base, $action, array $body, array $headers) {
@@ -245,7 +273,7 @@ function beatmail_get($base, array $query, array $headers) {
     return json_decode(file_get_contents($url, false, $context), true);
 }
 
-$headers = beatmail_headers($apiAuthEnabled, $apiKey);
+$headers = beatmail_headers($apiKey);
 
 $created = beatmail_post($base, 'create', [
     'service' => 'temp-mail-io',

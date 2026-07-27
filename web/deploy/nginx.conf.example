@@ -1,0 +1,76 @@
+# ============================================================
+# BeatMail — Nginx 配置片段（可选）
+#
+# ⚠ 这份配置是「锦上添花」，不是必需品。
+#   项目已在 PHP 层面自我保护：
+#     - config/auth/cache/InstantMail.php 直接访问返回 404
+#       （靠 BEATMAIL_APP 常量判断是否为正规入口）
+#     - 缓存文件用 .php 扩展并带 <?php exit; 前缀，下载只得到空白
+#   所以**虚拟主机改不了 nginx 配置也是安全的**，本文件可以忽略。
+#
+# 有权限改配置时加上这些规则，可多一层纵深防御
+# （比如 PHP-FPM 意外挂掉、不再解析 .php 的极端情况）。
+#
+# 宝塔/1Panel：网站设置 → 配置文件，粘贴到 server {} 内。
+# 部署在子目录（如 /mail/）时保持下面的路径；
+# 若部署在根目录，把 /mail 前缀去掉。
+# ============================================================
+
+# ── 1. 安全响应头 ───────────────────────────────────
+add_header X-Content-Type-Options   "nosniff"    always;
+add_header X-Frame-Options          "SAMEORIGIN" always;
+# 注意：不要用 no-referrer。api/auth.php 的同源判断在老浏览器上
+# 需要 Referer 兜底，no-referrer 会把它清空导致前端被 401。
+add_header Referrer-Policy          "same-origin" always;
+add_header Strict-Transport-Security "max-age=31536000" always;
+
+# ── 2. 禁止访问敏感文件（关键）──────────────────────
+# 核心库、配置、缓存都不该被直接请求
+location ~* ^/mail/api/(InstantMail|config|cache|auth)\.php$ {
+    deny all;
+    return 404;
+}
+
+# 缓存目录整体封死
+location ^~ /mail/api/cache/ {
+    deny all;
+    return 404;
+}
+
+# 隐藏文件、备份、压缩包、文档
+location ~* /\.(ht|git|env) {
+    deny all;
+    return 404;
+}
+
+location ~* ^/mail/.*\.(zip|tar|gz|bak|sql|log|md)$ {
+    deny all;
+    return 404;
+}
+
+# 旧版本残留的自测脚本（已从项目移除，防止主机上还有）
+location ^~ /mail/tools/ {
+    deny all;
+    return 404;
+}
+
+# ── 3. 关闭目录列表 ─────────────────────────────────
+autoindex off;
+
+# ── 4. 静态资源缓存 ─────────────────────────────────
+location ~* ^/mail/assets/.*\.(css|js|png|svg|woff2?)$ {
+    expires 7d;
+    add_header Cache-Control "public, max-age=604800";
+}
+
+# ── 5. PHP 处理（若面板已配置可跳过本段）────────────
+# location ~ \.php$ {
+#     include        fastcgi_params;
+#     fastcgi_pass   unix:/tmp/php-cgi-74.sock;
+#     fastcgi_index  index.php;
+#     fastcgi_param  SCRIPT_FILENAME $document_root$fastcgi_script_name;
+#
+#     # 关键：部分 FastCGI 不透传 Authorization 头，
+#     # 不加这行外部 API 鉴权会一直 401
+#     fastcgi_param  HTTP_AUTHORIZATION $http_authorization;
+# }

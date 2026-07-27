@@ -21,8 +21,8 @@ Options -Indexes
   </IfModule>
 </FilesMatch>
 
-# 禁止直接访问核心库与自测脚本
-<Files "InstantMail.php">
+# 禁止直接访问核心库、配置与缓存
+<FilesMatch "^(InstantMail|config|cache|auth)\.php$">
   <IfModule mod_authz_core.c>
     Require all denied
   </IfModule>
@@ -30,13 +30,25 @@ Options -Indexes
     Order allow,deny
     Deny from all
   </IfModule>
-</Files>
+</FilesMatch>
+
+# 禁止下载压缩包 / 文档 / 备份
+<FilesMatch "\.(zip|tar|gz|bak|sql|log|md)$">
+  <IfModule mod_authz_core.c>
+    Require all denied
+  </IfModule>
+  <IfModule !mod_authz_core.c>
+    Order allow,deny
+    Deny from all
+  </IfModule>
+</FilesMatch>
 
 # 安全响应头（主机支持时生效）
 <IfModule mod_headers.c>
   Header set X-Content-Type-Options "nosniff"
   Header set X-Frame-Options "SAMEORIGIN"
-  Header set Referrer-Policy "no-referrer"
+  # 不要用 no-referrer：api/auth.php 同源判断在老浏览器上需要 Referer 兜底
+  Header set Referrer-Policy "same-origin"
   Header set X-XSS-Protection "1; mode=block"
 </IfModule>
 

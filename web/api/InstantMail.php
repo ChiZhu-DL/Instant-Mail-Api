@@ -10,6 +10,11 @@
 
 declare(strict_types=1);
 
+if (!defined('BEATMAIL_APP')) {
+    http_response_code(404);
+    exit;
+}
+
 class InstantMailError extends RuntimeException
 {
     public int $httpStatus;
@@ -141,7 +146,7 @@ abstract class BaseHttpClient
             throw new RuntimeException('curl_init failed');
         }
 
-        curl_setopt_array($ch, [
+        $opts = [
             CURLOPT_URL => $url,
             CURLOPT_CUSTOMREQUEST => strtoupper($method),
             CURLOPT_RETURNTRANSFER => true,
@@ -153,9 +158,20 @@ abstract class BaseHttpClient
             CURLOPT_SSL_VERIFYHOST => 2,
             CURLOPT_ENCODING => '',
             CURLOPT_IPRESOLVE => CURL_IPRESOLVE_V4,
-            // 路径里可能含字面量 @（temp-mail-io 要求），禁止 curl 再改写
-            CURLOPT_PATH_AS_IS => true,
-        ]);
+        ];
+
+        // 路径里可能含字面量 @（temp-mail-io 要求），禁止 curl 再改写。
+        // 老 curl 编译版本没有此常量；一旦数组里出现未定义常量，
+        // curl_setopt_array 会整体失败（超时/SSL/UA 全部丢失），故必须条件设置。
+        if (defined('CURLOPT_PATH_AS_IS')) {
+            $opts[CURLOPT_PATH_AS_IS] = true;
+        }
+
+        if (curl_setopt_array($ch, $opts) === false) {
+            $err = curl_error($ch);
+            curl_close($ch);
+            throw new RuntimeException('curl_setopt_array failed: ' . $err);
+        }
 
         if ($payload !== null) {
             curl_setopt($ch, CURLOPT_POSTFIELDS, $payload);
@@ -344,16 +360,14 @@ function is_temp_mail_io_mailbox(string $email): bool
         if (in_array($domain, TEMP_MAIL_IO_RETIRED_DOMAINS, true)) {
             return true;
         }
-        // 也查实时列表缓存成本高，这里再快速比对常见 live 集合
+        // getDomains() 自身带落盘缓存，这里再加一层 per-request 静态量
+        // 避免同一次请求内重复走文件 IO
         static $liveCache = null;
-        static $liveAt = 0;
-        if ($liveCache === null || (time() - $liveAt) > 300) {
+        if ($liveCache === null) {
             try {
                 $liveCache = array_map('strtolower', (new TempMailIoClient(8))->getDomains());
-                $liveAt = time();
             } catch (Throwable $e) {
                 $liveCache = TEMP_MAIL_IO_DOMAINS;
-                $liveAt = time();
             }
         }
         return in_array($domain, $liveCache, true);
@@ -492,8 +506,40 @@ final class TempMailIoClient extends BaseHttpClient
         parent::__construct(TEMP_MAIL_IO_BASE, $timeout);
     }
 
-    /** @return list<string> */
+    /**
+     * 实时域名列表。
+     *
+     * 上游单次约 1.7s，而首页、创建、收件判断都要用它，
+     * 因此按 TTL 落盘缓存；缓存不可用时退化为每次直连。
+     *
+     * @return list<string>
+     */
     public function getDomains(): array
+    {
+        if (function_exists('cache_remember') && defined('CACHE_TTL_DOMAINS')) {
+            // fetchDomains 失败时返回 null，cache_remember 不写入，
+            // 避免一次网络抖动把兜底列表钉死 5 分钟
+            $cached = cache_remember(
+                'domains_temp_mail_io.json',
+                CACHE_TTL_DOMAINS,
+                function () {
+                    return $this->fetchDomains();
+                }
+            );
+            if (is_array($cached) && $cached !== []) {
+                return array_values(array_map('strval', $cached));
+            }
+            return TEMP_MAIL_IO_DOMAINS;
+        }
+
+        return $this->fetchDomains() ?? TEMP_MAIL_IO_DOMAINS;
+    }
+
+    /**
+     * 拉取上游域名。失败返回 null（供调用方区分「失败」与「空列表」）。
+     * @return list<string>|null
+     */
+    private function fetchDomains(): ?array
     {
         try {
             $data = $this->request('GET', '/v4/domains');
@@ -507,9 +553,9 @@ final class TempMailIoClient extends BaseHttpClient
                 }
             }
             $out = array_values(array_filter($out));
-            return $out ?: TEMP_MAIL_IO_DOMAINS;
+            return $out ?: null;
         } catch (Throwable $e) {
-            return TEMP_MAIL_IO_DOMAINS;
+            return null;
         }
     }
 

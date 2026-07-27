@@ -1,5 +1,5 @@
-# Apache: 只允许走 index.php 入口，禁止下载源码库
-<Files "InstantMail.php">
+# Apache: 只允许走 index.php 入口，禁止下载源码与配置
+<FilesMatch "^(InstantMail|config|cache|auth)\.php$">
   <IfModule mod_authz_core.c>
     Require all denied
   </IfModule>
@@ -7,13 +7,17 @@
     Order allow,deny
     Deny from all
   </IfModule>
-</Files>
+</FilesMatch>
 
 DirectoryIndex index.php
 
-# 保证 POST JSON 能传到 PHP
+# 部分 CGI/FastCGI 不透传 Authorization 头，导致外部 API 鉴权恒 401
 <IfModule mod_rewrite.c>
   RewriteEngine On
+  RewriteCond %{HTTP:Authorization} ^(.+)$
+  RewriteRule ^ - [E=HTTP_AUTHORIZATION:%1]
+
+  # 保证 POST JSON 能传到 PHP
   RewriteCond %{REQUEST_FILENAME} !-f
   RewriteRule ^ index.php [L,QSA]
 </IfModule>
