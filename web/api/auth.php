@@ -2,10 +2,13 @@
 /**
  * 鉴权：本站页面免密，外部调用需 Authorization: Bearer <API_KEY>。
  *
- * 同源判断优先用 Sec-Fetch-Site（浏览器盖章，JS 改不了），
- * 老浏览器退回 Origin / Referer——后两者可被伪造。
- * 所以这不是强安全边界，只是把「随手 curl 白嫖」挡在外面，
- * 真正兜底的是限流。
+ * 同源判断以 Sec-Fetch-Site 为准（浏览器盖章，JS 改不了）。
+ * 2026-10-24 加固：无 Sec-Fetch-Site 时（老浏览器或 curl 等命令行工具），
+ * 不再凭 Origin/Referer 放行本站自身——该头可被 curl 任意伪造，
+ * 实测 `curl -H "Origin: https://站点"` 即可白嫖免密接口。
+ * 现在只有显式配置在 API_EXTRA_ALLOWED_HOSTS 里的外部合作域名
+ * 才走 Origin/Referer 兜底；本站页面请求一律要求 Sec-Fetch-Site。
+ * (Sec-Fetch-Site 自 2021 年起全主流浏览器支持；极老浏览器请用 Bearer 调用)
  */
 
 declare(strict_types=1);
@@ -45,8 +48,8 @@ function is_same_origin_request(): bool
         return false;
     }
 
+    // 兜底只认显式配置的外部白名单，本站自身不再进兜底列表（防 Origin 伪造）
     $allowed = array_map('strtolower', API_EXTRA_ALLOWED_HOSTS);
-    $allowed[] = $self;
 
     /**
      * Sec-Fetch-Site 是 forbidden header name，页面 JS 无法伪造，
@@ -63,13 +66,14 @@ function is_same_origin_request(): bool
         return in_array(url_host((string) ($_SERVER['HTTP_ORIGIN'] ?? '')), $allowed, true);
     }
 
-    // 老浏览器兜底：Origin 优先（跨域请求浏览器必带）
+    // 无 Sec-Fetch-Site（老浏览器或 curl）：Origin/Referer 只认外部白名单，
+    // 不再放行本站自身 host——防止伪造 Origin 免密调用
     $origin = $_SERVER['HTTP_ORIGIN'] ?? '';
     if (is_string($origin) && $origin !== '') {
         return in_array(url_host($origin), $allowed, true);
     }
 
-    // 同源 GET 常常没有 Origin，退回 Referer
+    // 同源 GET 常常没有 Origin，退回 Referer（同样只认外部白名单）
     // 前提：Referrer-Policy 不能是 no-referrer，否则这里拿不到值
     $referer = $_SERVER['HTTP_REFERER'] ?? '';
     if (is_string($referer) && $referer !== '') {

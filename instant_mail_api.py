@@ -54,15 +54,16 @@ HD_APP_KEY = "b9db03078622"
 # 已验证域名列表
 # ──────────────────────────────────────────────
 # 静态兜底；以 GET /v4/domains 实时列表为准。
-# 注意：已下线域名（如 wnbaldwy.com）再 create 会被上游随机改到其它域。
+# 上游会定期轮换域名：请求已下线域名时 create 会被改到其它随机域。
+# 实测同步: 2026-10-24 /v4/domains
 TEMP_MAIL_IO_DOMAINS = [
-    "bltiwd.com",
-    "bwmyga.com",
-    "ozsaip.com",
     "yzcalo.com",
     "lnovic.com",
     "ruutukf.com",
     "gmeenramy.com",
+    "olipii.com",
+    "ooynib.com",
+    "tanpony.com",
 ]
 
 HD_PREMIUM_DOMAINS = [
@@ -221,15 +222,24 @@ class TempMailIoClient(BaseHttpClient):
             raise ValueError("temp-mail-io 需要 --email 或同时提供 --name 和 --domain")
 
         data = self._request("POST", "/v3/email/new", {"domain": domain, "name": name})
-        mailbox = data.get("email")
+        mailbox = data.get("email") or f"{name}@{domain}"
         token = data.get("token")
+        result_data: dict[str, Any] = {
+            "mailbox": mailbox,
+            "token": token,
+            "service": "temp-mail-io",
+        }
+        # 上游可能把已下线域名改分配到其它随机域，显式提醒调用方
+        got_domain = mailbox.rsplit("@", 1)[-1].lower()
+        if got_domain != domain.lower():
+            result_data["requested_domain"] = domain
+            result_data["warning"] = (
+                f"请求域名 {domain} 未被上游接受，实际分配 {got_domain}；"
+                f"后续收信请使用返回的 mailbox"
+            )
         return {
             "status": 200,
-            "data": {
-                "mailbox": mailbox or f"{name}@{domain}",
-                "token": token,
-                "service": "temp-mail-io",
-            },
+            "data": result_data,
             "raw": data,
         }
 
@@ -616,6 +626,8 @@ def main(argv: list[str] | None = None) -> int:
   %(prog)s --service hd-gmail create --email random@gmail.com
   %(prog)s messages test@bltiwd.com --token TOKEN
   %(prog)s list-domains
+
+注意: --service / --timeout 等全局选项必须放在子命令之前
 """,
     )
     parser.add_argument(

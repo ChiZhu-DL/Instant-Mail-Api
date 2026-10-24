@@ -29,13 +29,13 @@
 python instant_mail_api.py list-domains
 
 # 创建邮箱
-python instant_mail_api.py --service temp-mail-io create --email test@bltiwd.com
+python instant_mail_api.py --service temp-mail-io create --email test@yzcalo.com
 
 # 读取邮件 (通用接口，适用于所有邮箱)
-python instant_mail_api.py messages test@bltiwd.com --token TOKEN
+python instant_mail_api.py messages test@yzcalo.com --token TOKEN
 
 # 读取单封邮件详情
-python instant_mail_api.py message MESSAGE_ID --email test@bltiwd.com --token TOKEN
+python instant_mail_api.py message MESSAGE_ID --email test@yzcalo.com --token TOKEN
 ```
 
 ## 四套服务详解
@@ -44,25 +44,25 @@ python instant_mail_api.py message MESSAGE_ID --email test@bltiwd.com --token TO
 
 - **Base URL**: `https://api.internal.temp-mail.io/api`
 - **无需加密**
-- **8 个固定域名**，可指定创建
+- **约 7 个域名**（上游会轮换，以实时列表为准），可指定创建
 
 | 域名 | 说明 |
 |------|------|
-| bltiwd.com | 固定域名（实时列表为准） |
-| bwmyga.com | 固定域名 |
-| ozsaip.com | 固定域名 |
 | yzcalo.com | 固定域名 |
 | lnovic.com | 固定域名 |
 | ruutukf.com | 固定域名 |
 | gmeenramy.com | 固定域名 |
+| olipii.com | 固定域名 |
+| ooynib.com | 固定域名 |
+| tanpony.com | 固定域名 |
 
-> **域名会上下线**：请以 `GET /v4/domains` 或网站 `action=domains` 返回为准。  
-> 例如 `wnbaldwy.com` 已从上游列表移除；再指定它创建时，上游仍返回 200，但邮箱会被**随机换到其它标准域**（不是客户端编码问题）。
+> **域名会上下线**（2026-10 实测轮换过：bltiwd.com / bwmyga.com / ozsaip.com 已下线）：请以 `GET /v4/domains` 或网站 `action=domains` 返回为准。  
+> 指定已下线域名创建时，上游仍返回 200，但邮箱会被**随机换到其它标准域**（不是客户端编码问题）。
 
 **创建邮箱:**
 
 ```powershell
-python instant_mail_api.py --service temp-mail-io create --email myuser@bltiwd.com
+python instant_mail_api.py --service temp-mail-io create --email myuser@yzcalo.com
 ```
 
 **接口:**
@@ -70,7 +70,7 @@ python instant_mail_api.py --service temp-mail-io create --email myuser@bltiwd.c
 ```
 GET  /v4/domains                         获取域名列表
 POST /v3/email/new                       创建邮箱
-     Body: {"domain":"bltiwd.com","name":"test"}
+     Body: {"domain":"yzcalo.com","name":"test"}
 GET  /v3/email/{email}/messages          拉取收件箱 (仅支持 temp-mail-io 域名)
 GET  /v3/message/{message_id}            读取单封邮件
 ```
@@ -192,7 +192,7 @@ python instant_mail_api.py messages test@tempmail.edu.pl --token TOKEN
 python instant_mail_api.py messages "zu.leik.a.dene.k.e@gmail.com" --token 4d4a008c5b9ec9800d9bf041bb46aaeb
 
 # 读取 temp-mail-io 邮箱的邮件
-python instant_mail_api.py messages "test@bltiwd.com" --token TOKEN
+python instant_mail_api.py messages "test@yzcalo.com" --token TOKEN
 
 # 读取邮件详情
 python instant_mail_api.py message c8e94d52-63f2-4150-b537-ddacec0127ed --email "zu.leik.a.dene.k.e@gmail.com" --token 4d4a008c5b9ec9800d9bf041bb46aaeb
@@ -225,10 +225,10 @@ python instant_mail_api.py message c8e94d52-63f2-4150-b537-ddacec0127ed --email 
 
 **temp-mail-io（以实时 /v4/domains 为准，静态兜底约 7 个）:**
 ```
-bltiwd.com, bwmyga.com, ozsaip.com, yzcalo.com,
-lnovic.com, ruutukf.com, gmeenramy.com
+yzcalo.com, lnovic.com, ruutukf.com, gmeenramy.com,
+olipii.com, ooynib.com, tanpony.com
 ```
-`wnbaldwy.com` 等已下线域名勿再使用。
+`bltiwd.com` / `bwmyga.com` / `ozsaip.com` / `wnbaldwy.com` 等已下线域名勿再使用。
 
 **hd-premium (9 个):**
 ```

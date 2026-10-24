@@ -41,7 +41,7 @@ web/                          # 网站根目录（整个目录上传到服务器
 
 ## 🛠️ 环境要求
 
-- **PHP**: 7.4+ (推荐 8.0+)
+- **PHP**: 7.4+ (推荐 8.3 / 8.4+，PHP 8.5 已实测兼容；7.4/8.0/8.1 已 EOL)
 - **扩展**: curl, json, openssl (建议 mbstring)
 - **网络**: 服务器必须能访问外部网络 (需调用上游邮箱 API)
 - **权限**: `api/cache/` 需对 PHP 可写（否则缓存与限流自动降级，站点仍可用）
@@ -62,27 +62,9 @@ web/                          # 网站根目录（整个目录上传到服务器
    - `cache_writable` 为 `true`
    - `auth_enabled` 为 `true`
    - `curl_path_as_is` 为 `false` 属正常（老 curl 缺该常量，已做降级处理）
-## 面板设置伪静态
-```bash
-# 封死核心库/配置/缓存被直接访问
-location ~* ^/api/(InstantMail|config|cache|auth)\.php$ { deny all; return 404; }
-location ^~ /api/cache/ { deny all; return 404; }
-location ~* /\.(ht|git|env) { deny all; return 404; }
-location ~* ^/.*\.(zip|tar|gz|bak|sql|log|md)$ { deny all; return 404; }
 
-# 关目录列表 + 静态资源缓存
-autoindex off;
-location ~* ^/assets/.*\.(css|js|png|svg|woff2?)$ {
-    expires 7d;
-    add_header Cache-Control "public, max-age=604800";
-}
-
-# 安全响应头
-add_header X-Content-Type-Options "nosniff" always;
-add_header X-Frame-Options "SAMEORIGIN" always;
-add_header Referrer-Policy "same-origin" always;
-```
-
+Nginx 伪静态 / 安全规则参考 [`deploy/nginx.conf.example`](./deploy/nginx.conf.example)，
+详细部署说明见 [`deploy/DEPLOY.md`](../deploy/DEPLOY.md)。
 
 ## 🔒 鉴权与限流
 
@@ -90,15 +72,15 @@ add_header Referrer-Policy "same-origin" always;
 
 | 来源 | 是否需要密钥 |
 |------|-------------|
-| 本站页面自身的请求 | 否（靠 `Sec-Fetch-Site` / Origin 判断） |
+| 本站页面自身的请求 | 否（以 `Sec-Fetch-Site` 为准；Origin/Referer 兜底仅认 `API_EXTRA_ALLOWED_HOSTS` 白名单） |
 | 外部脚本 / curl | 是，需 `Authorization: Bearer <API_KEY>` |
 | `action=health` | 否（始终公开，方便探活） |
 
 限流按 IP 固定窗口：一般接口 60 次/分钟，创建邮箱 10 次/分钟，
 超限返回 `429` 并带 `Retry-After`。
 
-> 同源判断依赖请求头，而请求头可被伪造，因此它只挡「随手 curl 白嫖」，
-> 不是强安全边界。真正兜底的是限流。
+> 同源判断依赖请求头，而非浏览器的客户端可伪造任意头，
+> 因此它只挡「随手 curl 白嫖」，不是强安全边界。真正兜底的是限流。
 
 ## 💻 本地开发调试
 
@@ -122,5 +104,5 @@ php -S 127.0.0.1:8080
 
 ## ⚠️ 免责声明
 
-本项目仅供学习与技术交流。邮件收发依赖于公开的第三方上游服务接口（由应用逆向得出），如果上游服务更新导致接口失效，需自行更新 InstantMail.php 中的密钥与端点。**请勿将临时邮箱用于注册重要账号。**
+仅供学习与技术交流，详见[根目录 README](../README.md)。**请勿将临时邮箱用于注册重要账号。**
 

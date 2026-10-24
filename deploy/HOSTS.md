@@ -58,7 +58,7 @@ https://你的域名/tools/email_selftest.php
 
 ### 2. 面板设置
 
-1. **网站** → 添加站点 → PHP 选 **7.4 / 8.0 / 8.1+**（有 curl）
+1. **网站** → 添加站点 → PHP 选 **8.3 / 8.4+**（有 curl；7.4 / 8.0 / 8.1 已 EOL 不建议）
 2. **网站目录** = 上面的根目录  
 3. **伪静态**：可留空（我们用 `index.php?action=`，不依赖复杂 rewrite）  
 4. **配置文件** → 在 `server { ... }` 内确认/合并以下要点：
@@ -207,7 +207,7 @@ https://你的域名/api/index.php?action=health
 ## 五、部署检查清单
 
 - [ ] 上传的是 `web/` **内容**，不是整个 `mail` 仓库  
-- [ ] PHP ≥ 7.4，扩展 **curl** 已开  
+- [ ] PHP ≥ 7.4（推荐 8.3+），扩展 **curl** 已开  
 - [ ] `action=health` 返回 ok  
 - [ ] `tools/email_selftest.php` 显示 ALL PASSED（然后删或 deny）  
 - [ ] 创建邮箱后，页面显示含 **`@`** 的地址（不是 `%40`）  
