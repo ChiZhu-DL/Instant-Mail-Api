@@ -259,10 +259,9 @@
     el.selectDomain.innerHTML = '';
     el.selectDomain.appendChild(frag);
 
-    // 默认：第一个实时标准域（勿写死已下线的 wnbaldwy.com）
+    // 默认：第一个实时标准域（域名以下拉实时列表为准，勿写死具体域名——会下线）
     if (list.length) {
       const prefer =
-        list.find((x) => x.service === 'temp-mail-io' && x.domain === 'bltiwd.com') ||
         list.find((x) => x.service === 'temp-mail-io') ||
         list[0];
       el.selectDomain.value = JSON.stringify({ domain: prefer.domain, service: prefer.service });
@@ -350,9 +349,14 @@
       playBlip(880);
 
       enterBoard();
+      // 立即清空上一任邮箱的收件箱 UI，避免旧邮件残留到首次刷新
+      renderInbox([]);
+      el.metricCount.textContent = '0';
       toast('邮箱已就绪 · ' + mailbox, 'good');
       setStatus('在线', 'ok');
-      await refreshInbox({ silent: true });
+      // force: 此时 state.loading 仍为 true（hideLoading 在 finally），
+      // 不加 force 会被 loading 守卫吞掉，旧邮件就会一直挂着
+      await refreshInbox({ silent: true, force: true });
       startPolling();
     } catch (e) {
       setStatus('创建失败', 'bad');
@@ -396,6 +400,7 @@
     el.screenStart.classList.add('is-active');
     el.metricCount.textContent = '0';
     el.metricTimer.textContent = '—';
+    renderInbox([]); // 清掉收件箱 DOM，别只清 state
     setStatus('就绪', 'ok');
     toast('选个域名，再开一把');
   }
@@ -432,12 +437,16 @@
 
     try {
       // email stays with "@"; URLSearchParams / encodeURIComponent → %40
+      const reqMailbox = state.session.mailbox;
       const res = await api('messages', {
         query: {
-          email: state.session.mailbox,
+          email: reqMailbox,
           token: state.session.token,
         },
       });
+
+      // 过期响应守卫：请求期间若已换号，丢弃本次结果，防止旧邮箱邮件串进新界面
+      if (!state.session || state.session.mailbox !== reqMailbox) return;
 
       const list = (res.data && res.data.messages) || [];
       const prevCount = state.messages.length;
@@ -457,7 +466,9 @@
       });
       saveSeen();
 
-      if (newOnes.length && prevCount > 0) {
+      // 注意：不要求 prevCount > 0——新邮箱第一封到达时旧列表是空的，
+      // 加这个条件会把最关键的验证码邮件提醒吞掉
+      if (newOnes.length) {
         toast('新邮件 ×' + newOnes.length + '！', 'good');
         playBlip(1046);
       } else if (!opts.silent) {
@@ -526,13 +537,16 @@
 
     showLoading('打开邮件…');
     try {
+      const reqMailbox = state.session.mailbox;
       const res = await api('message', {
         query: {
-          email: state.session.mailbox,
+          email: reqMailbox,
           token: state.session.token,
           id: id,
         },
       });
+      // 换号守卫：响应回来时会话已切走就丢弃，别把旧邮箱邮件画进新界面
+      if (!state.session || state.session.mailbox !== reqMailbox) return;
       const d = res.data || {};
       el.detailSubject.textContent = d.subject || '(无主题)';
       el.detailFrom.textContent = d.from || '—';
