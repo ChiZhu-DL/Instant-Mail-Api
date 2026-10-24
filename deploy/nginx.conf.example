@@ -6,6 +6,8 @@ location ~* ^/.*\.(zip|tar|gz|bak|sql|log|md)$ { deny all; return 404; }
 
 # 关目录列表 + 静态资源缓存
 autoindex off;
+# /api 目录 301 时保持 https（否则会先跳 http 再被 CDN 转回 https，多一跳）
+absolute_redirect off;
 location ~* ^/assets/.*\.(css|js|png|svg|woff2?)$ {
     expires 7d;
     add_header Cache-Control "public, max-age=604800";
