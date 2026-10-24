@@ -100,7 +100,7 @@ python instant_mail_api.py message MESSAGE_ID --email test@bltiwd.com --token TO
 cd web
 php -S 127.0.0.1:8080
 ```
-[下载web releases](https://github.com/ChiZhu-DL/Instant-Mail-Api/releases/tag/InstantMail)
+[下载web releases](https://github.com/ChiZhu-DL/Instant-Mail-Api/releases)
 ### 环境要求
 
 | 项 | 要求 |
